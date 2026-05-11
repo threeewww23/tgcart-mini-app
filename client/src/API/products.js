@@ -1,26 +1,44 @@
-const API_URL = "https://dummyjson.com";
+// ВСТАВЬТЕ СЮДА ВАШ ID ТАБЛИЦЫ
+const SHEET_ID = "12QfMQYwyIWW9Q4sxhQVZZMLNmpoD01jZJ_CAmahUtTI"; 
+const SHEET_NAME = "Лист1"; // Убедитесь, что вкладка называется так
 
-export async function getProducts({ category, ...params }) {
-  const search = new URLSearchParams(params);
+export async function getProducts() {
+  const reqUrl = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
+  
+  try {
+    const response = await fetch(reqUrl);
+    const data = await response.json();
+    
+    // Преобразуем данные из таблицы (цены из текста в числа)
+    const formattedProducts = data.map(item => ({
+      ...item,
+      price: Number(item.price),
+      discountPercentage: 0 // Заглушка, чтобы шаблон не ругался
+    }));
 
-  const reqUrl =
-    category && category !== "all"
-      ? `${API_URL}/products/category/${category}?${search.toString()}`
-      : `${API_URL}/products?${search.toString()}`;
+    return { products: formattedProducts };
+  } catch (error) {
+    console.error("Ошибка загрузки товаров из таблицы:", error);
+    return { products: [] };
+  }
+}
 
+// Заглушка для категорий (пока отключим их)
+export async function getCategories() {
+  return ["all"];
+}
+
+// Получить один товар по ID (ищет в той же таблице)
+export async function getProduct(id) {
+  const reqUrl = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
   const response = await fetch(reqUrl);
   const data = await response.json();
-  return data;
-}
-
-export async function getCategories() {
-  const response = await fetch(`${API_URL}/products/categories`);
-  const data = await response.json();
-  return ["all", ...data.splice(0, 10)];
-}
-
-export async function getProduct(id) {
-  const response = await fetch(`${API_URL}/product/${id}`);
-  const data = await response.json();
-  return data;
+  
+  const product = data.find(item => String(item.id) === String(id));
+  return {
+    ...product,
+    price: Number(product.price),
+    discountPercentage: 0,
+    images: [product.thumbnail] // В шаблоне используется массив картинок
+  };
 }

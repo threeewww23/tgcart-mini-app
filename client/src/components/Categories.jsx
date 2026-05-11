@@ -25,7 +25,7 @@ export default function Categories({
           key={category}
           onClick={() => handleClick(category)}
         >
-          {category}
+          {typeof category === 'object' ? category.name : category}
         </button>
       ))}
     </section>
