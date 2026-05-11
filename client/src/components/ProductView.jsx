@@ -125,7 +125,7 @@ export default function ProductView() {
       </p>
       
       <div className="text-sm flex gap-2 items-center my-2">
-        <span className="text-md">${getFinalPrice(product)}</span>
+        <span className="text-md font-bold">{getFinalPrice(product)} руб.</span>
       </div>
       
       <div className="flex gap-4 items-center">

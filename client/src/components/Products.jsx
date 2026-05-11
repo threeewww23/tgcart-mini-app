@@ -43,14 +43,8 @@ export default function Products() {
               <div className="font-medium truncate text-sm">
                 {product.title}
               </div>
-              <div className="text-sm flex gap-2 items-center">
-                <span className=" opacity-50 line-through">
-                  ${product.price}
-                </span>
-                <span>${getFinalPrice(product)}</span>
-                <span className=" text-[var(--tg-theme-link-color)] text-xs">
-                  {Math.ceil(product.discountPercentage)}% off
-                </span>
+                            <div className="text-sm flex gap-2 items-center">
+                <span>{getFinalPrice(product)} руб.</span>
               </div>
             </section>
             <section className="w-5">
