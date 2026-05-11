@@ -6,7 +6,7 @@ export default function CartPage() {
   const navigate = useNavigate();
 
   const handleCheckout = () => {
-    const sellerUsername = "threeewww23"; // ВАШ ЛОГИН
+    const sellerUsername = "threeew"; // ВАШ ЛОГИН
     let orderText = "🛍 *Новый заказ!*\n\n";
     cartItems.forEach(item => {
       const sizeText = item.selectedSize ? ` (Размер: ${item.selectedSize})` : "";
