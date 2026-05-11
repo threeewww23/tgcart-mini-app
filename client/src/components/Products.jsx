@@ -21,9 +21,12 @@ export default function Products() {
     }
   };
 
-  let displayedProducts = products.filter((product) =>
-    product.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // ФИЛЬТРАЦИЯ: по Поиску + по Категории!
+  let displayedProducts = products.filter((product) => {
+    const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = activeCategory === "all" || product.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   if (sortOrder === "asc") {
     displayedProducts.sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
@@ -94,7 +97,7 @@ export default function Products() {
         )}
       </section>
 
-      {/* ПЛАВАЮЩАЯ КОРЗИНА ВНИЗУ */}
+      {/* ПЛАВАЮЩАЯ КНОПКА: ПЕРЕХОД В КОРЗИНУ */}
       {cartItems.length > 0 && (
         <div className="fixed bottom-4 left-4 right-4 bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)] p-3 rounded-xl shadow-lg flex justify-between items-center z-50">
           <div className="flex flex-col">
@@ -102,24 +105,10 @@ export default function Products() {
             <span className="font-bold">{totalPrice} руб.</span>
           </div>
           <button 
-            onClick={() => {
-              const sellerUsername = "threeewww23"; // ВАШ ЛОГИН
-              let orderText = "🛍 *Новый заказ!*\n\n";
-              cartItems.forEach(item => {
-                  orderText += `▪️ ${item.title} x${item.quantity} — ${item.price * item.quantity} руб.\n`;
-              });
-              orderText += `\n💰 *Итого:* ${totalPrice} руб.`;
-              const encodedText = encodeURIComponent(orderText);
-              
-              if (window.Telegram?.WebApp?.openTelegramLink) {
-                window.Telegram.WebApp.openTelegramLink(`https://t.me/${sellerUsername}?text=${encodedText}`);
-              } else {
-                window.open(`https://t.me/${sellerUsername}?text=${encodedText}`, "_blank");
-              }
-            }}
+            onClick={() => navigate("/cart")}
             className="bg-[var(--tg-theme-button-text-color)] text-[var(--tg-theme-button-color)] px-4 py-2 rounded-lg font-bold text-sm"
           >
-            Оформить
+            Перейти
           </button>
         </div>
       )}

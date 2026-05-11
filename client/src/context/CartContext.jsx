@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 const CartContext = createContext();
 
@@ -7,49 +7,44 @@ export const useCart = () => useContext(CartContext);
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
 
-  // Очистить корзину после успешного заказа
   const clearCart = () => setCartItems([]);
 
-  // Добавить товар в корзину
-  const addToCart = (product, quantity) => {
+  // Добавляем с учетом выбранного размера
+  const addToCart = (product, quantity, size = null) => {
     setCartItems((prev) => {
-      const existingItem = prev.find((item) => String(item.id) === String(product.id));
+      // Ищем товар с ТАКИМ ЖЕ id и ТАКИМ ЖЕ размером
+      const existingItem = prev.find(
+        (item) => String(item.id) === String(product.id) && item.selectedSize === size
+      );
       if (existingItem) {
         return prev.map((item) =>
-          String(item.id) === String(product.id)
+          String(item.id) === String(product.id) && item.selectedSize === size
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
-      return [...prev, { ...product, quantity }];
+      return [...prev, { ...product, quantity, selectedSize: size }];
     });
   };
 
-  // Удалить один товар из корзины (или уменьшить количество)
-  const removeFromCart = (productId) => {
-    setCartItems((prev) => {
-      const existingItem = prev.find((item) => String(item.id) === String(productId));
-      if (existingItem.quantity === 1) {
-        return prev.filter((item) => String(item.id) !== String(productId));
+  const removeFromCart = (productId, size = null) => {
+    setCartItems((prev) => prev.filter((item) => !(String(item.id) === String(productId) && item.selectedSize === size)));
+  };
+
+  const updateQuantity = (productId, size, amount) => {
+    setCartItems((prev) => prev.map((item) => {
+      if (String(item.id) === String(productId) && item.selectedSize === size) {
+        const newQuantity = item.quantity + amount;
+        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
       }
-      return prev.map((item) =>
-        String(item.id) === String(productId)
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
-      );
-    });
+      return item;
+    }));
   };
 
-  // Подсчет общей суммы
-  const totalPrice = cartItems.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
+  const totalPrice = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   return (
-    <CartContext.Provider
-      value={{ cartItems, addToCart, removeFromCart, clearCart, totalPrice }}
-    >
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, totalPrice }}>
       {children}
     </CartContext.Provider>
   );

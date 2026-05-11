@@ -4,41 +4,36 @@ const SHEET_NAME = "Лист1"; // Убедитесь, что вкладка н�
 
 export async function getProducts() {
   const reqUrl = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
-  
   try {
     const response = await fetch(reqUrl);
     const data = await response.json();
     
-    // Преобразуем данные из таблицы (цены из текста в числа)
     const formattedProducts = data.map(item => ({
       ...item,
       price: Number(item.price),
-      discountPercentage: 0 // Заглушка, чтобы шаблон не ругался
+      discountPercentage: 0,
+      category: item.category || "Без категории",
+      sizes: item.sizes ? String(item.sizes).split(',').map(s => s.trim()) : []
     }));
-
     return { products: formattedProducts };
   } catch (error) {
-    console.error("Ошибка загрузки товаров из таблицы:", error);
     return { products: [] };
   }
 }
 
-// Заглушка для категорий (пока отключим их)
+// Получаем уникальные категории из товаров
 export async function getCategories() {
-  return ["all"];
+  const { products } = await getProducts();
+  const allCategories = products.map(p => p.category);
+  const uniqueCategories = [...new Set(allCategories)];
+  return ["all", ...uniqueCategories];
 }
 
-// Получить один товар по ID (ищет в той же таблице)
 export async function getProduct(id) {
-  const reqUrl = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
-  const response = await fetch(reqUrl);
-  const data = await response.json();
-  
-  const product = data.find(item => String(item.id) === String(id));
+  const { products } = await getProducts();
+  const product = products.find(item => String(item.id) === String(id));
   return {
     ...product,
-    price: Number(product.price),
-    discountPercentage: 0,
-    images: [product.thumbnail] // В шаблоне используется массив картинок
+    images: [product.thumbnail]
   };
 }

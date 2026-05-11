@@ -15,7 +15,11 @@ export default function ProductView() {
   const [state, setState] = useState(initialState);
   const { isLoading, product, count } = state;
   const navigate = useNavigate();
-  const { addToCart } = useCart(); // Подключаем корзину!
+  const { addToCart } = useCart();
+  
+  // Состояния для выбранного размера и уведомления (Toast)
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     getProduct(productId).then((res) => {
@@ -39,15 +43,26 @@ export default function ProductView() {
   };
 
   const handleAddToCart = () => {
-    addToCart(product, count);
+    // Если у товара есть размеры, но ни один не выбран — ругаемся
+    if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred("error");
+      }
+      alert("Пожалуйста, выберите размер!");
+      return;
+    }
+
+    addToCart(product, count, selectedSize);
+    
     if (window.Telegram?.WebApp?.HapticFeedback) {
-      window.Telegram.WebApp.HapticFeedback.impactOccurred("medium");
+      window.Telegram.WebApp.HapticFeedback.notificationOccurred("success");
     }
-    // После добавления в корзину возвращаем пользователя в каталог
-    navigate("/");
-    if (window.Telegram?.WebApp?.BackButton) {
-      window.Telegram.WebApp.BackButton.hide();
-    }
+
+    // Показываем уведомление
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 2000);
   };
 
   if (isLoading || !product)
@@ -62,16 +77,21 @@ export default function ProductView() {
   const images = product.images && product.images.length > 0 ? product.images : [product.thumbnail];
 
   return (
-    <div className="m-4">
+    <div className="m-4 pb-20 relative">
+      {/* Зеленое уведомление (Toast) */}
+      {showToast && (
+        <div className="fixed top-4 left-4 right-4 bg-green-500 text-white p-3 rounded-lg shadow-lg z-50 text-center font-bold fadeIn">
+          ✅ Товар добавлен в корзину!
+        </div>
+      )}
+
       <section className="carousel relative h-[200px] rounded overflow-hidden">
         <ol className="carousel__viewport overflow-hidden">
           {images.map((image, index) => (
             <li
               key={index}
-              id={`carousel__slide${index + 1}`}
-              tabIndex="0"
-              style={{ background: `url(${image})`, backgroundSize: "cover", backgroundPosition: "center" }}
               className="carousel__slide"
+              style={{ background: `url(${image})`, backgroundSize: "cover", backgroundPosition: "center" }}
             >
               <div className="carousel__snapper"></div>
             </li>
@@ -79,28 +99,48 @@ export default function ProductView() {
         </ol>
       </section>
       
-      <div className="mt-4 font-medium">{product.title}</div>
-      <p className="font-normal text-sm text-[var(--tg-theme-hint-color)] line-clamp-3 mt-1">
+      <div className="mt-4 font-medium text-lg">{product.title}</div>
+      <p className="font-normal text-sm text-[var(--tg-theme-hint-color)] mt-2">
         {product.description}
       </p>
       
-      <div className="text-sm flex gap-2 items-center my-2">
-        <span className="text-md font-bold">{getFinalPrice(product)} руб.</span>
+      <div className="text-xl font-bold my-3">
+        {getFinalPrice(product)} руб.
       </div>
+
+      {/* БЛОК РАЗМЕРОВ (Показывается, если в таблице есть колонка sizes) */}
+      {product.sizes && product.sizes.length > 0 && (
+        <div className="my-4">
+          <div className="text-sm text-[var(--tg-theme-hint-color)] mb-2">Выберите размер:</div>
+          <div className="flex gap-2 flex-wrap">
+            {product.sizes.map(size => (
+              <button 
+                key={size} 
+                onClick={() => setSelectedSize(size)}
+                className={`px-4 py-2 rounded-lg font-bold border transition-all duration-200 ${
+                  selectedSize === size 
+                  ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)] border-[var(--tg-theme-button-color)] scale-105' 
+                  : 'bg-transparent text-[var(--tg-theme-text-color)] border-[var(--tg-theme-hint-color)] opacity-70'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       
-      <div className="flex gap-4 items-center">
-        <div className="flex max-w-[100px] flex-row h-10 w-full rounded-lg relative bg-transparent">
-          <button onClick={() => addToCount(-1)} className="bg-[var(--tg-theme-secondary-bg-color)] h-full w-16 rounded-l outline-none">
-            <span className="m-auto text-2xl font-thin">-</span>
-          </button>
-          <input type="number" readOnly className="focus:outline-none text-center w-full bg-[var(--tg-theme-secondary-bg-color)] font-semibold text-md cursor-default outline-none" value={count} />
-          <button onClick={() => addToCount(1)} className="bg-[var(--tg-theme-secondary-bg-color)] h-full w-16 rounded-r">
-            <span className="m-auto text-2xl font-thin">+</span>
-          </button>
+      <div className="flex gap-4 items-center mt-6">
+        {/* Кнопки Плюс и Минус */}
+        <div className="flex max-w-[120px] flex-row h-12 w-full rounded-lg bg-[var(--tg-theme-secondary-bg-color)]">
+          <button onClick={() => addToCount(-1)} className="h-full w-12 rounded-l outline-none font-bold text-xl">-</button>
+          <input type="number" readOnly className="focus:outline-none text-center w-full bg-transparent font-bold text-lg outline-none" value={count} />
+          <button onClick={() => addToCount(1)} className="h-full w-12 rounded-r font-bold text-xl">+</button>
         </div>
 
-        <button onClick={handleAddToCart} className="text-[var(--tg-theme-button-text-color)] flex items-center gap-2 bg-[var(--tg-theme-button-color)] p-2 px-4 rounded-md font-medium my-2 w-full justify-center">
-          <span className="material-symbols-outlined">shopping_cart</span>
+        {/* Кнопка "В корзину" */}
+        <button onClick={handleAddToCart} className="flex-1 flex items-center justify-center gap-2 bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)] h-12 rounded-lg font-bold transition-transform active:scale-95">
+          <span className="material-symbols-outlined">add_shopping_cart</span>
           <span>В корзину</span>
         </button>
       </div>

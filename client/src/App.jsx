@@ -2,6 +2,7 @@ import Products from "./components/Products";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 import ProductView from "./components/ProductView";
+import CartPage from "./components/CartPage"; // ДОБАВИЛИ ИМПОРТ
 import { CartProvider } from "./context/CartContext";
 
 window.Telegram = window.Telegram || {
@@ -24,6 +25,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<Products />} />
             <Route path="/product/:productId" element={<ProductView />} />
+            <Route path="/cart" element={<CartPage />} /> {/* ДОБАВИЛИ МАРШРУТ */}
           </Routes>
         </BrowserRouter>
       </div>
