@@ -1,84 +1,128 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useProducts from "../hooks/useProducts";
 import Categories from "./Categories";
 import "./products-style.css";
 import getFinalPrice from "../utils/getFinalPrice";
+import { useCart } from "../context/CartContext";
 
 export default function Products() {
-  const { activeCategory, products, categories, setCategory } =
-    useProducts();
-
+  const { activeCategory, products, categories, setCategory } = useProducts();
   const navigate = useNavigate();
+  const { cartItems, totalPrice } = useCart();
 
-  const shareLink = (product) => {
-    Telegram.WebApp.openTelegramLink(
-      `https://t.me/share/url?text=Hey! Check this incredible deal for ${product.title} at ${import.meta.env.VITE_APP_NAME}&url=https://dummyjson.com/products/${product.id}`
-    );
-  };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState("");
 
   const goToProductView = (product) => {
     navigate(`/product/${product.id}`);
-    Telegram?.WebApp.HapticFeedback.impactOccurred("medium");
-    Telegram.WebApp.BackButton.show();
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.impactOccurred("medium");
+    }
   };
 
+  let displayedProducts = products.filter((product) =>
+    product.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (sortOrder === "asc") {
+    displayedProducts.sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
+  } else if (sortOrder === "desc") {
+    displayedProducts.sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
+  }
+
   return (
-    <div className="px-2 fadeIn">
-      {import.meta.env.REACT_APP_BACKEND_URL}
+    <div className="px-2 fadeIn pb-24">
       <Categories
         items={categories}
         active={activeCategory}
         onCategoryClick={setCategory}
       />
+
+      <div className="my-3 flex flex-col gap-2">
+        <input
+          type="text"
+          placeholder="Поиск по названию..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full p-2 rounded-md bg-[var(--tg-theme-secondary-bg-color)] text-[var(--tg-theme-text-color)] outline-none"
+        />
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          className="w-full p-2 rounded-md bg-[var(--tg-theme-secondary-bg-color)] text-[var(--tg-theme-text-color)] outline-none"
+        >
+          <option value="">Без сортировки</option>
+          <option value="asc">Сначала дешевые</option>
+          <option value="desc">Сначала дорогие</option>
+        </select>
+      </div>
+
       <section className="products">
-        {products.map((product) => (
-          <div key={product.id} className="product-item ">
-            <button onClick={() => goToProductView(product)}>
-              <img
-                className="w-16 h-14 object-cover rounded"
-                src={product.thumbnail}
-              />
-            </button>
-            <section className="flex-1">
-              <div className="font-medium truncate text-sm">
-                {product.title}
-              </div>
-                            <div className="text-sm flex gap-2 items-center">
-                <span>{getFinalPrice(product)} руб.</span>
-              </div>
-            </section>
-            <section className="w-5">
-              <div className="dropdown">
-                <button className="p-2 dropbtn">
-                  <span className="material-symbols-outlined">more_vert</span>
-                </button>
-
-                <div className="dropdown-content text-sm">
-                  <button
-                    onClick={() => goToProductView(product)}
-                    className="w-full gap-2 flex items-center justify-start"
-                  >
-                    <span className="material-symbols-outlined text-[var(--tg-theme-hint-color)]">
-                      shopping_bag
-                    </span>
-                    <span>Buy</span>{" "}
-                  </button>
-
-                  <button
-                    onClick={() => shareLink(product)}
-                    className="w-full gap-2 flex items-center justify-start"
-                  >
-                    <span className="material-symbols-outlined text-[var(--tg-theme-hint-color)]">
-                      send
-                    </span>
-                    <span>Share</span>
-                  </button>
-                </div>
-              </div>
-            </section>
+        {displayedProducts.length === 0 ? (
+          <div className="text-center w-full mt-4 text-[var(--tg-theme-hint-color)]">
+            Товары не найдены
           </div>
-        ))}
+        ) : (
+          displayedProducts.map((product) => (
+            <div key={product.id} className="product-item">
+              <button onClick={() => goToProductView(product)}>
+                <img
+                  className="w-16 h-14 object-cover rounded"
+                  src={product.thumbnail}
+                  alt={product.title}
+                />
+              </button>
+              <section className="flex-1" onClick={() => goToProductView(product)}>
+                <div className="font-medium truncate text-sm">
+                  {product.title}
+                </div>
+                <div className="text-sm flex gap-2 items-center">
+                  <span className="font-bold">{getFinalPrice(product)} руб.</span>
+                </div>
+              </section>
+              <section className="w-5">
+                <button
+                  onClick={() => goToProductView(product)}
+                  className="p-2 text-[var(--tg-theme-button-color)]"
+                >
+                  <span className="material-symbols-outlined">add_shopping_cart</span>
+                </button>
+              </section>
+            </div>
+          ))
+        )}
       </section>
+
+      {/* ПЛАВАЮЩАЯ КОРЗИНА ВНИЗУ */}
+      {cartItems.length > 0 && (
+        <div className="fixed bottom-4 left-4 right-4 bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)] p-3 rounded-xl shadow-lg flex justify-between items-center z-50">
+          <div className="flex flex-col">
+            <span className="font-bold text-sm">В корзине: {cartItems.reduce((acc, i) => acc + i.quantity, 0)} шт.</span>
+            <span className="font-bold">{totalPrice} руб.</span>
+          </div>
+          <button 
+            onClick={() => {
+              const sellerUsername = "threeewww23"; // ВАШ ЛОГИН
+              let orderText = "🛍 *Новый заказ!*\n\n";
+              cartItems.forEach(item => {
+                  orderText += `▪️ ${item.title} x${item.quantity} — ${item.price * item.quantity} руб.\n`;
+              });
+              orderText += `\n💰 *Итого:* ${totalPrice} руб.`;
+              const encodedText = encodeURIComponent(orderText);
+              
+              if (window.Telegram?.WebApp?.openTelegramLink) {
+                window.Telegram.WebApp.openTelegramLink(`https://t.me/${sellerUsername}?text=${encodedText}`);
+              } else {
+                window.open(`https://t.me/${sellerUsername}?text=${encodedText}`, "_blank");
+              }
+            }}
+            className="bg-[var(--tg-theme-button-text-color)] text-[var(--tg-theme-button-color)] px-4 py-2 rounded-lg font-bold text-sm"
+          >
+            Оформить
+          </button>
+        </div>
+      )}
     </div>
   );
 }
